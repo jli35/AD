@@ -1,0 +1,208 @@
+#include "deque.h"
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include "cs136-trace.h"
+
+struct llnode {
+  int item;
+  struct llnode *prev;
+  struct llnode *next;
+};
+
+struct deque {
+  struct llnode *front;
+  struct llnode *back;
+};
+/////////////////////////////////////////////////////////////////////////////
+
+// The following applies to all functions
+// requires: all deque parameters must be valid (non-null)
+// time: (n) is the number of items in the deque
+
+// deque_create() returns a pointer to a new (empty) deque
+// effects: allocates memory (caller must call deque_destroy)
+// time: O(1)
+struct deque *deque_create(void) {
+  struct deque *deq = malloc(sizeof(struct deque));
+  deq->front = NULL;
+  deq->back = NULL;
+  return deq;
+}
+
+// deque_destroy(deq) destroys the deq
+// effects: deq is no longer valid (freed)
+// time: O(n)
+void deque_destroy(struct deque *deq) {
+  assert(deq);
+  //trace_ptr(deq);
+  struct llnode *curnode = deq->front;
+  struct llnode *nextnode = NULL;
+  while (curnode) {
+    nextnode = curnode->next;
+    //trace_ptr(curnode);
+    free(curnode);
+    curnode = nextnode;
+  }
+  free(deq);
+}
+
+// deque_is_empty(deq) determines if deq is empty
+// time: O(1)
+bool deque_is_empty(const struct deque *deq) {
+  assert(deq);
+  return deq->front == NULL;
+}
+
+
+// deque_insert_front(item, deq) inserts item into the front of deq
+// effects: modifies deq
+// time: O(1)
+void deque_insert_front(int item, struct deque *deq) {
+  assert(deq);
+  struct llnode *newnode = malloc(sizeof(struct llnode));
+  newnode->item = item;
+  newnode->prev = NULL;
+  newnode->next = deq->front;
+  if (deq->front == NULL) {
+    deq->back = newnode;
+  } else {
+    deq->front->prev = newnode;
+  }
+  deq->front = newnode;
+}
+
+
+// deque_front(deq) returns the front of deq
+// requires: deq is not empty
+// time: O(1)
+int deque_front(const struct deque *deq) {
+  assert(deq); 
+  return deq->front->item;
+}
+
+// deque_remove_front(deq) removes and returns the front of deq
+// requires: deq is not empty
+// effects: modifies deq
+// time: O(1)
+int deque_remove_front(struct deque *deq) {
+  assert(deq);
+  assert(deq->front);
+  int retval = deq->front->item;
+  struct llnode *old_front = deq->front;
+  deq->front = deq->front->next;
+  if(deq->front) {
+    deq->front->prev = NULL;
+  }
+  free(old_front);
+  if (deq->front == NULL) {
+    deq->back = NULL; 
+  }
+  return retval;
+}
+
+
+// deque_insert_back(item, deq) inserts item into the back of deq
+// effects: modifies deq
+// time: O(1)
+void deque_insert_back(int item, struct deque *deq) {
+  assert(deq);
+  struct llnode *newnode = malloc(sizeof(struct llnode));
+  newnode->item = item;
+  newnode->next = NULL;
+  newnode->prev = deq->back;
+  if (deq->front == NULL) {
+    // queue was empty
+    deq->front = newnode;
+  } else {
+    deq->back->next = newnode;
+  }
+  deq->back = newnode;
+}
+
+
+// deque_back(deq) returns the back of deq
+// requires: deq is not empty
+// time: O(1)
+int deque_back(const struct deque *deq) {
+  assert(deq);
+  assert(deq->back);
+  return(deq->back->item);
+}
+
+// deque_remove_back(deq) removes and returns the back of deq
+// requires: deq is not empty
+// effects: modifies deq
+// time: O(1)
+int deque_remove_back(struct deque *deq) {
+  assert(deq);
+  assert(deq->back);
+  int retval = deq->back->item;
+  struct llnode *old_back = deq->back;
+  deq->back = deq->back->prev;
+  if(deq->back) {
+    deq->back->next = NULL;
+  }
+  free(old_back);
+  if (deq->back == NULL) {
+    deq->front = NULL; 
+  }
+  return retval;
+}
+
+
+// deque_print(deq) prints out the items in deq
+// notes: prints "[empty]\n" if deq is empty
+//        prints "[%d]\n" if deq has a single item
+//        prints "[%d,%d,...,%d]\n" otherwise 
+//               so if the deq from front->back is 8,6,7,5,3,0,9
+//               prints "[8,6,7,5,3,0,9]\n"
+// effects: produces output
+// time: O(n)
+void deque_print(const struct deque *deq) {
+  assert(deq);
+
+  if(deq->front == NULL) {
+    printf("[empty]\n"); 
+    return;
+  } else if (deq->front->next == NULL) {
+    printf("[%d]\n", deq->front->item);
+    return;
+  }
+  printf("[%d,", deq->front->item);
+  struct llnode *nextnode = deq->front->next->next;
+  while (nextnode) {
+    printf("%d,", nextnode->prev->item);
+    nextnode = nextnode->next;
+  }
+  printf("%d]\n", deq->back->item);
+}
+
+// deque_print_reverse(deq) prints out the items in deq in reverse
+// notes: prints "[empty]\n" if deq is empty
+//        prints "[%d]\n" if deq has a single item
+//        prints "[%d,%d,...,%d]\n" otherwise 
+//               so if the deq from front->back is 8,6,7,5,3,0,9
+//               prints "[9,0,3,5,7,6,8]\n"
+// effects: produces output
+// time: O(n)
+void deque_print_reverse(const struct deque *deq) {
+  assert(deq);
+
+  if(deq->back == NULL) {
+    printf("[empty]\n"); 
+    return;
+  } else if (deq->back->prev == NULL) {
+    printf("[%d]\n", deq->back->item);
+    return;
+  }
+  printf("[%d,", deq->back->item);
+  struct llnode *prevnode = deq->back->prev->prev;
+  while (prevnode) {
+    printf("%d,", prevnode->next->item);
+    prevnode = prevnode->prev;
+  }
+  printf("%d]\n", deq->front->item);
+}

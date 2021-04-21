@@ -1,0 +1,191 @@
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+#include "dictionary.h"
+
+// sample code from the notes:
+
+// You will probably want to do one of:
+// * modify this code base
+// * add some of this code into ddict.c and then modify it
+// * ignore this code and go your own way
+
+struct bstnode {
+  char *item;                // key
+  char *value;             // additional value (augmentation)
+  struct bstnode *left;
+  struct bstnode *right;
+};
+
+struct double_dict {
+  struct bstnode *root;
+};
+
+// ddict_create() creates and returns a new empty double dictionary
+// effects: allocates memory (must call ddict_destroy)
+// time: O(1)
+struct double_dict *ddict_create(void) {
+  struct double_dict *dd = malloc(sizeof(struct double_dict));
+  dd->root = NULL;
+  return dd;
+}
+
+
+static char *my_strdup(const char *src) {
+  assert(src);
+  char *dup = malloc(strlen(src) * sizeof(char) + 1);
+  strcpy(dup, src);
+  return dup;
+}
+
+
+static struct bstnode *new_leaf(const char *key, const char *val) {
+  assert(val);
+  assert(key);
+  struct bstnode *leaf = malloc(sizeof(struct bstnode));
+  leaf->item = my_strdup(key);
+  leaf->value = my_strdup(val);    // make a copy
+  leaf->left = NULL;
+  leaf->right = NULL;
+  return leaf;
+}
+
+// ddict_insert(key, value, dd) adds a new key/value pair into the dd
+// note: if either key exists or value exists, insert is ignored
+//       and there is no effect
+// effects: may modify dd
+// time: O(h*m)
+void ddict_insert(const char *key, const char *value, struct double_dict *dd) {
+  assert(key);
+  assert(value);
+  assert(dd);
+  struct bstnode *node = dd->root;
+  struct bstnode *parent = NULL;
+  while (node && strcmp(node->item, key)!=0 && strcmp(node->value, value)!=0){
+    parent = node;
+    if (strcmp(key,node->item) < 0) {
+      node = node->left;
+    } else {
+      node = node->right;
+    }
+  }
+
+  if (node != NULL) { // key already exists at node
+    return;
+  } else if (parent == NULL) { // empty tree
+    dd->root = new_leaf(key, value);
+  } else if (strcmp(key,parent->item) < 0) {
+    parent->left = new_leaf(key, value);
+  } else {
+    parent->right = new_leaf(key, value);
+  }
+}
+
+/*
+void dict_insert(int key, const char *val, struct dictionary *d) {
+  assert(d);
+  assert(val);
+  struct bstnode *node = d->root;
+  struct bstnode *parent = NULL;
+  while (node && node->item != key) {
+    parent = node;
+    if (key < node->item) {
+      node = node->left;
+    } else {
+      node = node->right;
+    }
+  }
+  if (node != NULL) { // key already exists at node
+    free(node->value);
+    node->value = my_strdup(val);
+  } else if (parent == NULL) { // empty tree
+    d->root = new_leaf(key, val);
+  } else if (key < parent->item) {
+    parent->left = new_leaf(key, val);
+  } else {
+    parent->right = new_leaf(key, val);
+  }
+}
+*/
+
+// ddict_lookup_by_key(key, dd) finds the corresponding value for the given key
+//   in dd or returns NULL if key does not appear in dd
+// time: O(h*m)
+const char *ddict_lookup_by_key(const char *key, 
+                                const struct double_dict *dd) {
+  assert(dd);
+  assert(key);
+  struct bstnode *node = dd->root;
+  while (node) {
+    if (strcmp(key, node->item) == 0) {
+      return node->value; 
+    }
+    if (strcmp(key, node->item) < 0) {
+      node = node->left;
+    } else {
+      node = node->right;
+    }
+  }
+  return NULL;
+}
+
+// ddict_lookup_by_value(value, dd) finds the corresponding key for the 
+//   given value in dd or returns NULL if value does not appear in dd
+// time: O(h*m)
+const char *ddict_lookup_by_value(const char *value,
+                                  const struct double_dict *dd){
+  assert(dd);
+  assert(value);
+  struct bstnode *node = dd->root;
+  while (node) {
+    if (strcmp(value, node->value) == 0) {
+      return node->item; 
+    }
+    if (strcmp(value, node->value) < 0) {
+      node = node->left;
+    } else {
+      node = node->right;
+    }
+  }
+  return NULL;
+}
+
+/*
+const char *dict_lookup(int key, const struct dictionary *d) {
+  assert(d);
+  struct bstnode *node = d->root;
+  while (node) {
+    if (node->item == key) {
+      return node->value;
+    }
+    if (key < node->item) {
+      node = node->left;
+    } else {
+      node = node->right;
+    }
+  }
+  return NULL;
+}
+*/
+
+
+static void free_bstnode(struct bstnode *node) {
+  if (node) {
+    free_bstnode(node->left);
+    free_bstnode(node->right);
+    free(node->item);
+    free(node->value);
+    free(node);
+  }
+}
+
+// ddict_destroy(dd) frees all memory associated with dd
+// effects: dd is no longer valid
+// time: O(n)
+void ddict_destroy(struct double_dict *dd) {
+  assert(dd);
+  free_bstnode(dd->root);
+  free(dd);
+}

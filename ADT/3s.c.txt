@@ -1,0 +1,205 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+
+struct triple_s {
+  int len;
+  int maxlen;
+  char **aos;
+};
+
+// The following applies to all functions
+// requires: all sss parameters are valid (not NULL) 
+//           all s parameters are valid (not NULL)
+// time: (n) is the number of strings in the sss
+//       (m) is the length of the string s
+
+// sss_create() creates a new SSS ADT
+// effects: allocates memory (you must call sss_destroy)
+// time: O(1)
+struct triple_s *sss_create(void) {
+  struct triple_s *sss = malloc(sizeof(struct triple_s));
+  sss->len = 0;
+  sss->maxlen = 1;
+  sss->aos = malloc(sss->maxlen * sizeof(char*));
+  return sss;
+}
+
+// sss_count(sss) gets the number of strings in sss
+// time: O(1)
+int sss_count(const struct triple_s *sss) {
+  assert(sss);
+  assert(sss->len >= 0);
+  return sss->len;
+}
+
+// sss_destroy(sss) destroys sss
+// requires: sss is valid (not NULL)
+// effects: sss is no longer valid
+// time: O(n)
+void sss_destroy(struct triple_s *sss) {
+  assert(sss);
+  int length = sss->len;
+
+  for (int i = 0; i < length; ++i) {
+    //trace_int(i);
+    //trace_ptr(sss->aos[i]);
+    assert(sss->aos[i]);
+    free(sss->aos[i]); 
+  }
+  free(sss->aos);
+  free(sss);
+}
+
+// sss_add(sss, s) adds s to sss in the correct index (lexicographically)
+// notes: if s already exists, there is no effect
+//        when s is added, the indices of words that lexicographically
+//          follow s will be changed (+1) because s is added into the "middle"
+// effects: may modify sss
+// time: O(n + m*logn)
+void sss_add(struct triple_s *sss, const char *s) {
+  assert(sss);
+  assert(s);
+
+  int dict_len = sss->len;
+  int low = 0;
+  int high = dict_len - 1;
+  int mid = 0;
+  int result = 0;
+
+  while (low <= high)
+  {
+    //trace_int(1);
+    mid = (low + high) / 2;
+    result = strcmp (sss->aos[mid], s);
+
+    if(result < 0) {
+      low = mid + 1;
+    } else if(result > 0) {
+      high = mid - 1;
+    } else if(result == 0) { 
+      return;
+    }
+  }
+
+  sss->len += 1;
+
+  if (sss->len == sss->maxlen) {
+    sss->maxlen *= 2;
+    sss->aos = realloc(sss->aos, sss->maxlen * sizeof(char*));
+  }
+  //trace_int(dict_len);
+  for (int i = dict_len; i > mid; --i) {
+    sss->aos[i] = sss->aos[i-1];
+  }
+  //  trace_int(1);
+  //  trace_int(mid);
+  //  printf("%s\n",new_s);
+
+  int str_len = strlen(s);
+  char *new_s = malloc((str_len + 1) * sizeof(char));
+  strcpy(new_s, s);
+  sss->aos[mid] = new_s;
+  return;
+}
+
+
+// sss_get(sss, idx) retrieves a pointer to the string in sss
+//   at the given idx (index)
+// requires: 0 <= idx < sss_count(sss)
+// time: O(1)
+const char *sss_get(const struct triple_s *sss, int idx) {
+  assert(sss);
+  assert(0 <= idx);
+  assert(idx < sss_count(sss));
+  assert(sss->aos[idx]);
+
+  //  trace_ptr(sss->aos[idx-1]);
+  //  trace_int(idx-1);
+  //  printf("%s\n",sss->aos[0]);
+  return sss->aos[idx];
+}
+
+// sss_add_follows(sss, s) adds s to the "end" of the sss
+// requires: s lexicographically follows all strings already in sss
+// effects: modifies sss
+// time: O(m) [amortized]
+void sss_add_follows(struct triple_s *sss, const char *s) {
+  assert(sss);
+  assert(s);
+  int length = sss_count(sss);
+ // trace_int(length-1);
+  if (length > 0) {
+    assert(strcmp(s, sss_get(sss, length-1)) > 0);
+  }
+
+  int str_len = strlen(s);
+  char *new_s = malloc((str_len + 1) * sizeof(char));
+  strcpy(new_s, s);
+  sss->len += 1;
+
+  if (sss->len == sss->maxlen) {
+    sss->maxlen *= 2;
+    sss->aos = realloc(sss->aos, sss->maxlen * sizeof(char*));
+  }
+  sss->aos[length] = new_s;
+
+}
+
+
+// sss_search(sss, s) finds the index of s in sss
+// note: returns -1 if s does not appear in the sss
+// time: O(m*logn)
+int sss_search(const struct triple_s *sss, const char *s) {
+  assert(sss);
+  assert(s);
+
+  int dict_len = sss->len;
+  if (dict_len <= 0) {
+    return -1; 
+  }
+
+  int low = 0;
+  int high = dict_len - 1;
+  int mid = 0;
+  int result = 0;
+
+  while (low <= high)
+  {
+    mid = (low + high) / 2;
+    result = strcmp (sss->aos[mid], s);
+
+    if(result < 0) {
+      low = mid + 1;
+    } else if(result > 0) {
+      high = mid - 1;
+    } else if(result == 0) { 
+      return mid;
+    }
+  }
+  return -1;
+}
+
+// sss_remove(sss, s) removes s from sss (if it exists)
+// notes: if s is removed, the indices of words that lexicographically
+//          follow s will be changed (-1)
+// effects: may modify sss
+// time: O(n + m*logn)
+void sss_remove(struct triple_s *sss, const char *s) {
+  assert(sss);
+  assert(s);
+
+  int length = sss->len;
+  int location = sss_search(sss, s);
+
+  if (location != -1) {
+    free(sss->aos[location]);
+    sss->aos[location] = NULL;
+    for (int i = location; i < length - 1; ++i) {
+      sss->aos[i] = sss->aos[i+1];
+    }
+    sss->len -= 1;
+  }
+
+}
